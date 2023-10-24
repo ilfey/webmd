@@ -4,17 +4,48 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strings"
+
+	"github.com/kyoto-framework/zen/v2"
+	"github.com/rotisserie/eris"
 )
+
+type File struct {
+	name string
+	path string
+}
+
+func (f *File) Name() string {
+	return f.name
+}
+
+func (f *File) NameWithoutExtension() string {
+	split := strings.Split(f.name, ".")
+	split = split[:len(split)-1]
+
+	return strings.Join(split, "")
+}
+
+func (f *File) Path() string {
+	return f.path
+}
+
+func (f *File) Route() string {
+	split := strings.Split(f.path[4:], ".")
+	split = split[:len(split)-1]
+
+	return strings.Join(split, "")
+}
 
 type Node struct {
 	pwd   string
-	files []string
+	files []*File
 	dirs  []*Node
 }
 
 type Options struct {
 	Pwd   string
-	Files []string
+	Files []*File
 	Dirs  []*Node
 }
 
@@ -29,7 +60,7 @@ func New(opt Options) *Node {
 func NewFromEntries(entities []fs.DirEntry, pwd string) (*Node, error) {
 	root := New(Options{
 		Pwd:   pwd,
-		Files: []string{},
+		Files: []*File{},
 		Dirs:  []*Node{},
 	})
 
@@ -50,14 +81,14 @@ func fillTree(root *Node, entries []fs.DirEntry) error {
 
 	if entry.IsDir() {
 		node := New(Options{
-			Pwd:   root.PWD() + "/" + entry.Name(),
-			Files: []string{},
+			Pwd:   root.pwd + "/" + entry.Name(),
+			Files: []*File{},
 			Dirs:  []*Node{},
 		})
 
-		nodeEntries, err := os.ReadDir(root.PWD() + "/" + entry.Name())
+		nodeEntries, err := os.ReadDir(root.pwd + "/" + entry.Name())
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to read dir %s", root.pwd+"/"+entry.Name())
 		}
 
 		err = fillTree(node, nodeEntries)
@@ -76,7 +107,12 @@ func fillTree(root *Node, entries []fs.DirEntry) error {
 		return nil
 	}
 
-	root.AddFile(entry.Name())
+	file := &File{
+		name: entry.Name(),
+		path: root.pwd + "/" + entry.Name(),
+	}
+
+	root.AddFile(file)
 
 	// Next
 	err := fillTree(root, entries[1:])
@@ -91,7 +127,7 @@ func (n *Node) PWD() string {
 	return n.pwd
 }
 
-func (n *Node) Files() []string {
+func (n *Node) Files() []*File {
 	return n.files
 }
 
@@ -103,8 +139,8 @@ func (n *Node) AddDir(dir *Node) {
 	n.dirs = append(n.dirs, dir)
 }
 
-func (n *Node) AddFile(file string) {
-	n.files = append(n.files, n.PWD()+"/"+file)
+func (n *Node) AddFile(file *File) {
+	n.files = append(n.files, file)
 }
 
 func (n *Node) IsEmpty() bool {
@@ -115,7 +151,33 @@ func (n *Node) String() string {
 	return fmt.Sprintf("PWD: %s\nFiles: %v\nDirs: %v\n", n.pwd, n.files, n.dirs)
 }
 
-func (n *Node) Execute(fn func(path string) error) error {
+func (n *Node) getFiles() []*File {
+	var files []*File
+
+	for _, dir := range n.dirs {
+		files = append(files, dir.getFiles()...)
+	}
+
+	return files
+}
+
+func (n *Node) AllFiles() []*File {
+	files := n.Files()
+
+	for _, dir := range n.Dirs() {
+		files = append(files, dir.getFiles()...)
+	}
+
+	return files
+}
+
+func (n *Node) AllRoutes() []string {
+	return zen.Map(n.AllFiles(), func(file *File) string {
+		return file.Route()
+	})
+}
+
+func (n *Node) Execute(fn func(file *File) error) error {
 	for _, file := range n.Files() {
 		err := fn(file)
 		if err != nil {

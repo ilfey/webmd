@@ -1,0 +1,44 @@
+# https://taskfile.dev
+
+version: "3"
+
+tasks:
+  default:
+    deps: [dev]
+
+  build:
+    desc: Build
+    deps: [build-css, build-js, build-img, build-font]
+
+  build-css:
+    desc: Build css
+    cmds:
+      - npx tailwindcss -m -c tailwind.config.js -o ../.dist/css/tailwind.min.css 
+      - npx esbuild --minify --external:*.woff2 --bundle ./src/index.css --outfile=../.dist/css/bundle.min.css
+  build-tlwcss-watch:
+    desc: Build css
+    cmds:
+      - npx tailwindcss -m -c tailwind.config.js -o ../.dist/css/tailwind.min.css -w
+
+  build-js:
+    desc: Build js
+    cmds:
+      - mkdir -p ../.dist/js
+      - cat js/*.js | npx esbuild --minify > ../.dist/js/bundle.min.js
+
+  build-img:
+    desc: Build img
+    cmds:
+      - rm -rf ../.dist/img
+      - cp -r ./src/img ../.dist/img
+
+  build-font:
+    desc: Build fonts
+    cmds:
+      - rm -rf ../.dist/font
+      - cp -r ./src/font ../.dist/font
+
+  clean:
+    desc: Clean
+    cmds:
+      - rm -rf ../.dist/css ../.dist/js ../.dist/img ../.dist/font

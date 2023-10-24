@@ -1,0 +1,41 @@
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@font-face {
+  font-family: 'Nunito-Sans';
+  font-style: normal;
+  font-weight: normal;
+  font-display: fallback;
+  src: url(../font/NunitoSans-Regular.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Nunito-Sans';
+  font-style: italic;
+  font-weight: normal;
+  font-display: fallback;
+  src: url(../font/NunitoSans-Italic.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Nunito-Sans';
+  font-style: normal;
+  font-weight: bold;
+  font-display: fallback;
+  src: url(../font/NunitoSans-Bold.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Nunito-Sans';
+  font-style: italic;
+  font-weight: bold;
+  font-display: fallback;
+  src: url(../font/NunitoSans-BoldItalic.woff2) format('woff2');
+}
+
+.dark {
+  color-scheme: dark;
+}

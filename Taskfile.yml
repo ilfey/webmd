@@ -1,0 +1,71 @@
+# https://taskfile.dev
+
+version: "3"
+
+vars:
+  EXE: main{{exeExt}}
+
+includes:
+  assets:
+    taskfile: ./assets/Taskfile.yml
+    dir: ./assets
+    aliases: [a]
+
+tasks:
+  default:
+    deps: [dev]
+
+  dev:
+    desc: Start server in development mode
+    cmds:
+      - task: assets:build
+      - task: build:current
+      - ./webmd.exe
+
+
+  build:
+    desc: Build server for windows and linux
+    deps: [build:windows, build:linux, a:build]
+
+  build:current:
+    desc: Build server for current os
+    deps: [fmt]
+    cmds:
+      - go build -v .
+    sources:
+      - ./**/*.go
+      - ./**/*.tpl
+      - ./**/*.tmpl
+      - ./**/*.html
+      - ./**/*.env
+
+  build:windows:
+    desc: Build server for windows
+    env:
+      GOOS: windows
+      GOARCH: amd64
+    cmds:
+      - go build -v .
+
+  build:linux:
+    desc: Build server for windows
+    env:
+      GOOS: linux
+      GOARCH: amd64
+    cmds:
+      - go build -v .
+
+  fmt:
+    desc: Format sources
+    cmds:
+      - go fmt {{catLines .PACKAGES}}
+    vars:
+      PACKAGES:
+        sh: go list ./...
+    silent: true
+
+  mod:
+    desc: Downloads and tidy Go modules
+    cmds:
+      - go mod download
+      - go mod tidy
