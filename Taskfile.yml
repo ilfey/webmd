@@ -13,7 +13,9 @@ includes:
 
 tasks:
   default:
-    deps: [dev]
+    cmds:
+      - task: build:current
+      - ./webmd.exe
 
   dev:
     desc: Start server in development mode
@@ -21,7 +23,6 @@ tasks:
       - task: assets:build
       - task: build:current
       - ./webmd.exe
-
 
   build:
     desc: Build server for windows and linux
@@ -32,12 +33,6 @@ tasks:
     deps: [fmt]
     cmds:
       - go build -v .
-    sources:
-      - ./**/*.go
-      - ./**/*.tpl
-      - ./**/*.tmpl
-      - ./**/*.html
-      - ./**/*.env
 
   build:windows:
     desc: Build server for windows

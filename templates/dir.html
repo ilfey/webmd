@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" class="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>{{.Route}}</title>
+  <link rel="stylesheet" href="/dist/css/bundle.min.css">
+  <link rel="stylesheet" href="/dist/css/tailwind.min.css">
+</head>
+
+<body class="font-nunito-sans h-screen flex flex-col items-center gap-4 bg-gray-200 dark:bg-gray-900">
+
+  <header class="max-w-5xl w-full rounded-lg top-0 p-4 bg-gray-100 dark:bg-gray-800">
+    <p class="text-center">
+      <a class="font-bold text-primary-600 hover:text-primary-500 underline" href="/">root</a>
+      <span class="text-gray-500/50">/</span>
+
+      {{range $link := .Links}}
+      <a class="font-bold text-primary-600 hover:text-primary-500 underline" href="/{{$link.Href}}">{{$link.Text}}</a>
+      <span class="text-gray-500/50">/</span>
+      {{end}}
+    </p>
+  </header>
+
+  <main class="max-w-5xl w-full flex-1 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
+    {{ template "CDirMenu" await .DirMenu }}
+  </main>
+
+  <footer class="max-w-5xl  py-4">
+    <p class="font-bold text-sm text-gray-500 text-center">© Created by ilfey 2023</p>
+  </footer>
+
+</body>
+
+</html>

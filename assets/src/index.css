@@ -39,3 +39,30 @@
 .dark {
   color-scheme: dark;
 }
+
+/* CodeBlock theme */
+
+.line {
+  display: flex;
+}
+
+.ln {
+  flex-shrink: 0;
+  white-space: pre;
+  user-select: none;
+  margin-right: 0.4rem;
+  padding: 0 0.4rem 0 0.4rem;
+  color: #7f7f7f
+}
+
+.kd, .k {
+  color: #b91c1c; /* red-700 */
+}
+
+.p {
+  color: #0284c7; /* sky-600 */
+}
+
+.o {
+  color: #15803d; /* green-700 */
+}
