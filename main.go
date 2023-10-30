@@ -15,9 +15,9 @@ import (
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
 
-	"github.com/ilfey/webmd/internal/tree"
+	"github.com/ilfey/webmd/tree"
 
-	mark "github.com/ilfey/webmd/internal/markdown"
+	mark "github.com/ilfey/webmd/markdown"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,10 +26,11 @@ func DirPage(dir *tree.Dir, logger *logrus.Logger) gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "dir.html", gin.H{
-			"Title": dir.Name(),
-			"Links": parseLinks(dir.Node),
-			"Dirs":  dir.Dirs(),
-			"Files": dir.Files(),
+			"Title":   dir.Name(),
+			"Links":   parseLinks(dir.Node),
+			"Dirs":    dir.Dirs(),
+			"IsEmpty": len(dir.Files()) == 0 && len(dir.Dirs()) == 0,
+			"Files":   dir.Files(),
 		})
 	}
 }
@@ -62,14 +63,12 @@ func FilePage(file *tree.File, logger *logrus.Logger) gin.HandlerFunc {
 	// Get nav
 	nav := mark.GetNav(doc)
 
-	// fmt.Printf("file.Links: %v\n", file.Links())
-
 	return func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "file.html", gin.H{
-			"title": file.Name(),
-			"links": parseLinks(file.Node),
-			"html":  html,
-			"nav":   nav,
+			"Title": file.Name(),
+			"Links": parseLinks(file.Node),
+			"Html":  html,
+			"Nav":   nav,
 		})
 	}
 }
@@ -192,16 +191,6 @@ func main() {
 	if err != nil {
 		logger.Panic(err)
 	}
-
-	// dirEntry, err := os.ReadDir(".md")
-	// if err != nil {
-	// 	logger.Error(err)
-	// }
-
-	// root, err := tree.NewFromEntries(dirEntry, ".md")
-	// if err != nil {
-	// 	logger.Error(err)
-	// }
 
 	engine := gin.New()
 

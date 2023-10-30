@@ -39,7 +39,6 @@ require (
 
 require (
 	github.com/gomarkdown/markdown v0.0.0-20230922112808-5421fefb8386
-	github.com/gorilla/mux v1.8.0
 	golang.org/x/exp v0.0.0-20220328175248-053ad81199eb // indirect
 	golang.org/x/text v0.9.0 // indirect
 )

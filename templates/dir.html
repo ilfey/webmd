@@ -25,6 +25,12 @@
   <main class="max-w-5xl w-full flex-1 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
     <div class="flex flex-wrap gap-4">
 
+      {{if .IsEmpty }}
+
+      <h1 class="mx-auto text-2xl font-bold">Empty directory</h1>
+
+      {{else}}
+
       <!-- Dirs -->
 
       {{range $dir := .Dirs}}
@@ -58,6 +64,8 @@
         <span class="block font-bold">{{$file.Name}}</span>
 
       </a>
+      {{end}}
+
       {{end}}
     </div>
   </main>

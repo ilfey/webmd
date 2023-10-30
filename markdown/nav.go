@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/gomarkdown/markdown/ast"
-	"github.com/ilfey/webmd/internal/tree"
+	"github.com/ilfey/webmd/tree"
 	"github.com/kyoto-framework/zen/v2"
 )
 

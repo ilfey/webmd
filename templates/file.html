@@ -6,7 +6,7 @@
   <meta name="viewport"
     content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>{{.title}}</title>
+  <title>{{.Title}}</title>
   <link rel="stylesheet" href="/dist/css/bundle.min.css">
   <link rel="stylesheet" href="/dist/css/tailwind.min.css">
 </head>
@@ -15,10 +15,9 @@
 
   <header class="max-w-5xl w-full p-4 rounded-lg">
     <p class="text-center text-red-500">
-      {{ $len := len .links }}
-      {{range $index, $link := .links}}
+      {{range $link := .Links}}
       <a class="font-bold text-primary-600 hover:text-primary-500 underline" href="{{$link.Href}}">{{$link.Text}}</a>
-      <span class="text-gray-500/50 last:hidden">/</span>
+      <span class="text-gray-500/50">/</span>
       {{end}}
     </p>
   </header>
@@ -32,7 +31,7 @@
         <hr class="border-gray-600 border-1 rounded-full my-2">
 
         <div class="flex flex-col gap-2">
-          {{range $route := .nav}}
+          {{range $route := .Nav}}
           <a class="block transition-colors duration-200 px-2 rounded hover:bg-gray-300/50 dark:hover:bg-gray-700/50"
             href="{{$route.Href}}">{{$route.Text}}</a>
           {{end}}
@@ -41,7 +40,7 @@
     </nav>
 
     <main class="w-full max-w-5xl shrink-0 bg-gray-100 dark:bg-gray-800/50 p-4 rounded-lg">
-      {{ .html }}
+      {{ .Html }}
     </main>
 
   </div>
