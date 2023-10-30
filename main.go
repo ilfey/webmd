@@ -1,77 +1,183 @@
 package main
 
 import (
+	"io/fs"
+	"strings"
+
+	"html/template"
 	"net/http"
 	"os"
 
-	"github.com/gorilla/mux"
-	"github.com/ilfey/webmd/internal/components"
-	"github.com/ilfey/webmd/internal/fstree"
-	"github.com/ilfey/webmd/internal/middlewares"
-	"github.com/ilfey/webmd/internal/pages"
+	"github.com/gin-gonic/gin"
 	"github.com/rotisserie/eris"
-	"github.com/sirupsen/logrus"
 
-	"github.com/kyoto-framework/kyoto/v2"
-	"github.com/kyoto-framework/zen/v2"
+	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/html"
+	"github.com/gomarkdown/markdown/parser"
+
+	"github.com/ilfey/webmd/internal/tree"
+
+	mark "github.com/ilfey/webmd/internal/markdown"
+	"github.com/sirupsen/logrus"
 )
 
-// setupPages registers a
-func setupPages(router *mux.Router, root *fstree.Dir, logger *logrus.Logger) {
+func DirPage(dir *tree.Dir, logger *logrus.Logger) gin.HandlerFunc {
+	logger.Infof("register dir: %s on %s", dir.Name(), dir.Path())
 
-	indexHandler, err := pages.PDir(root)
+	return func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "dir.html", gin.H{
+			"Title": dir.Name(),
+			"Links": parseLinks(dir.Node),
+			"Dirs":  dir.Dirs(),
+			"Files": dir.Files(),
+		})
+	}
+}
+
+func FilePage(file *tree.File, logger *logrus.Logger) gin.HandlerFunc {
+
+	// Read file
+	b, err := os.ReadFile(file.AbsolutePath())
 	if err != nil {
-		panic(eris.Wrap(err, "failed to create index handler"))
+		logger.Panic(eris.Wrapf(err, "failed to read file %s", file.AbsolutePath()))
 	}
 
-	router.HandleFunc("/", kyoto.HandlerPage(indexHandler))
+	// Create parser
+	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.OrderedListStart | parser.SuperSubscript | parser.NoEmptyLineBeforeBlock | parser.EmptyLinesBreakList
+	mdParser := parser.NewWithExtensions(extensions)
 
-	root.ExecuteOnAllDirs(func(dir *fstree.Dir) error {
-		handler, err := pages.PDir(dir)
-		if err != nil {
-			return err
+	// Create renderer
+	opts := html.RendererOptions{
+		Flags:          html.CommonFlags | html.HrefTargetBlank | html.SmartypantsAngledQuotes | html.SmartypantsQuotesNBSP,
+		RenderNodeHook: mark.RenderHook,
+	}
+	mdRenderer := html.NewRenderer(opts)
+
+	// Parse
+	doc := mdParser.Parse(b)
+
+	// Render
+	html := template.HTML(markdown.Render(doc, mdRenderer))
+
+	// Get nav
+	nav := mark.GetNav(doc)
+
+	// fmt.Printf("file.Links: %v\n", file.Links())
+
+	return func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "file.html", gin.H{
+			"title": file.Name(),
+			"links": parseLinks(file.Node),
+			"html":  html,
+			"nav":   nav,
+		})
+	}
+}
+
+func parseLinks(root *tree.Node) []*tree.Link {
+	links := []*tree.Link{
+		{
+			Text: root.Name(),
+			Href: root.Path(),
+		},
+	}
+
+	parent := root.Parent()
+
+	for parent != nil {
+		links = append(links, &tree.Link{
+			Text: parent.Name(),
+			Href: parent.Path(),
+		})
+
+		parent = parent.Parent()
+	}
+
+	for i, j := 0, len(links)-1; i < j; i, j = i+1, j-1 {
+		links[i], links[j] = links[j], links[i]
+	}
+
+	return links
+}
+
+func bindDirs(engine *gin.Engine, root *tree.Dir, logger *logrus.Logger) {
+	for _, d := range root.Dirs() {
+		bindDirs(engine, d, logger)
+	}
+
+	engine.Handle(http.MethodGet, root.Path(), DirPage(root, logger))
+}
+
+func bindFiles(engine *gin.Engine, root *tree.Dir, logger *logrus.Logger) {
+	for _, d := range root.Dirs() {
+		bindFiles(engine, d, logger)
+	}
+
+	for _, f := range root.Files() {
+		engine.Handle(http.MethodGet, f.Path(), FilePage(f, logger))
+	}
+}
+
+// setupPages registers
+func setupPages(engine *gin.Engine, root *tree.Dir, logger *logrus.Logger) {
+	bindDirs(engine, root, logger)
+	bindFiles(engine, root, logger)
+}
+
+func addNextDirs(root *tree.Dir, entries []fs.DirEntry) error {
+	for _, de := range entries {
+		name := de.Name()
+		absolutePath := root.AbsolutePath() + "/" + name
+
+		var nodename string
+
+		if strings.HasSuffix(root.Path(), "/") {
+			nodename = root.Path() + name
+		} else {
+			nodename = root.Path() + "/" + name
 		}
 
-		route := "/" + dir.Route()
+		if de.IsDir() {
 
-		logger.Infof("register dir: %v", route)
+			next := tree.NewDir(root.Node, name, nodename, absolutePath)
 
-		router.HandleFunc(route, kyoto.HandlerPage(handler))
+			nextPath := root.AbsolutePath() + "/" + name
+			nextEntries, err := os.ReadDir(nextPath)
+			if err != nil {
+				return eris.Wrapf(err, "failed to read dir %s", nextPath)
+			}
 
-		return nil
-	})
+			addNextDirs(next, nextEntries)
 
-	root.ExecuteOnAllFiles(func(file *fstree.File) error {
-		handler, err := pages.PPage(file)
-		if err != nil {
-			return err
+			root.AddDir(next)
+
+			continue
 		}
 
-		route := "/" + file.Route()
+		file := tree.NewFile(root.Node, name, nodename, absolutePath)
 
-		logger.Infof("register page: %v", route)
+		root.AddFile(file)
+	}
 
-		router.HandleFunc(route, kyoto.HandlerPage(handler))
-
-		return nil
-	})
+	return nil
 }
 
-func setupActions(router *mux.Router) {
-	component := components.CDirMenu(nil)
-	pattern := kyoto.ActionConf.Path + kyoto.ComponentName(component) + "/"
-	router.PathPrefix(pattern).HandlerFunc(kyoto.HandlerAction(component))
-}
+func GetFS(root *tree.Dir, path string) (*tree.Dir, error) {
+	dirEntries, err := os.ReadDir(path)
+	if err != nil {
+		return nil, eris.Wrapf(err, "failed to read dir %s", path)
+	}
 
-func setupMiddlewares(router *mux.Router, logger *logrus.Logger) {
-	router.Use(middlewares.Logging(logger))
-}
+	if root == nil {
+		root = tree.NewDir(nil, "root", "/", path)
+	}
 
-// setupAssets registers a static files handler.
-func setupAssets(mux *mux.Router) {
-	mux.PathPrefix("/dist/").Handler(
-		http.StripPrefix("/dist/", http.FileServer(http.Dir(".dist"))),
-	)
+	err = addNextDirs(root, dirEntries)
+	if err != nil {
+		return nil, err
+	}
+
+	return root, nil
 }
 
 func main() {
@@ -82,28 +188,32 @@ func main() {
 		TimestampFormat: "01/02 15:04:05",
 	}
 
-	dirEntry, err := os.ReadDir(".md")
+	root, err := GetFS(nil, ".md")
 	if err != nil {
-		logger.Error(err)
+		logger.Panic(err)
 	}
 
-	root, err := fstree.NewFromEntries(dirEntry, ".md")
-	if err != nil {
-		logger.Error(err)
-	}
+	// dirEntry, err := os.ReadDir(".md")
+	// if err != nil {
+	// 	logger.Error(err)
+	// }
 
-	router := mux.NewRouter()
+	// root, err := tree.NewFromEntries(dirEntry, ".md")
+	// if err != nil {
+	// 	logger.Error(err)
+	// }
 
-	// Setup kyoto
-	kyoto.TemplateConf.ParseGlob = "templates/*.html"
-	kyoto.TemplateConf.FuncMap = kyoto.ComposeFuncMap(
-		kyoto.FuncMap, zen.FuncMap,
+	engine := gin.New()
+
+	engine.LoadHTMLGlob("templates/*.html")
+	engine.StaticFS("/dist", http.Dir(".dist"))
+
+	engine.Use(
+		gin.Recovery(),
+		gin.Logger(),
 	)
 
-	setupMiddlewares(router, logger)
-	setupAssets(router)
-	setupPages(router, root, logger)
-	setupActions(router)
+	setupPages(engine, root, logger)
 
-	http.ListenAndServe(":8080", router)
+	http.ListenAndServe(":8080", engine)
 }

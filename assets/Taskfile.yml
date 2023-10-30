@@ -15,6 +15,7 @@ tasks:
     cmds:
       - npx tailwindcss -m -c tailwind.config.js -o ../.dist/css/tailwind.min.css
       - npx esbuild --minify --external:*.woff2 --bundle ./src/index.css --outfile=../.dist/css/bundle.min.css
+
   build-tlwcss-watch:
     desc: Build css
     cmds:

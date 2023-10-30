@@ -4,16 +4,15 @@ import (
 	"strings"
 
 	"github.com/gomarkdown/markdown/ast"
-	"github.com/ilfey/webmd/internal/fstree"
+	"github.com/ilfey/webmd/internal/tree"
 	"github.com/kyoto-framework/zen/v2"
 )
 
-func GetNav(node ast.Node) []*fstree.Link {
-
+func GetNav(node ast.Node) []*tree.Link {
 	var headings []*ast.Heading
 	getHeadings(node, &headings)
 
-	return zen.Map(headings, func(h *ast.Heading) *fstree.Link {
+	return zen.Map(headings, func(h *ast.Heading) *tree.Link {
 
 		var literals [][]byte
 		getLiteral(h, &literals)
@@ -22,7 +21,10 @@ func GetNav(node ast.Node) []*fstree.Link {
 			return string(l)
 		}), "")
 
-		return fstree.NewLink(text, "#"+formatID(h.HeadingID))
+		return &tree.Link{
+			Text: text,
+			Href: "#" + formatID(h.HeadingID),
+		}
 	})
 }
 

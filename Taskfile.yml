@@ -64,3 +64,15 @@ tasks:
     cmds:
       - go mod download
       - go mod tidy
+
+  test:
+    desc: Runs test server
+    env:
+      MODE: test
+    cmds:
+      - go clean -testcache
+      - go test {{catLines .PACKAGES}}
+    vars:
+      PACKAGES:
+        sh: go list ./...
+    silent: true
